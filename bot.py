@@ -1,13 +1,30 @@
 import telebot
 import os
+from flask import Flask
+import threading
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Ramadan Bot is Running!"
+
+def run():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+def bot_polling():
+    print("Bot running successfully...")
+    bot.infinity_polling()
+
 sehri_time = "4:45 AM"
 iftar_time = "6:10 PM"
 
-districts = ["Dhaka","Chittagong","Rajshahi","Khulna","Barisal","Sylhet","Rangpur","Mymensingh",
+districts = [
+"Dhaka","Chattogram","Rajshahi","Khulna","Barishal","Sylhet","Rangpur","Mymensingh",
 "Comilla","Feni","Brahmanbaria","Rangamati","Noakhali","Chandpur","Lakshmipur","Cox's Bazar",
 "Bandarban","Khagrachari","Sirajganj","Pabna","Bogura","Joypurhat","Naogaon","Natore",
 "Chapainawabganj","Jashore","Satkhira","Meherpur","Narail","Chuadanga","Kushtia","Magura",
@@ -15,7 +32,8 @@ districts = ["Dhaka","Chittagong","Rajshahi","Khulna","Barisal","Sylhet","Rangpu
 "Moulvibazar","Sunamganj","Dinajpur","Gaibandha","Kurigram","Lalmonirhat","Nilphamari",
 "Panchagarh","Thakurgaon","Sherpur","Jamalpur","Netrokona","Tangail","Kishoreganj",
 "Manikganj","Munshiganj","Narayanganj","Narsingdi","Faridpur","Gopalganj","Madaripur",
-"Rajbari","Shariatpur"]
+"Rajbari","Shariatpur"
+]
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -23,8 +41,8 @@ def start(message):
 
 Available Commands:
 
-/sehri - আজকের সেহরির সময়
-/iftar - আজকের ইফতারের সময়
+/sehri - আজকের সেহরি সময়
+/iftar - আজকের ইফতার সময়
 /district - বাংলাদেশের ৬৪ জেলা
 /dua - রমজানের দোয়া
 """
@@ -32,11 +50,11 @@ Available Commands:
 
 @bot.message_handler(commands=['sehri'])
 def sehri(message):
-    bot.reply_to(message, f"🌙 আজকের সেহরির সময়: {sehri_time}")
+    bot.reply_to(message, f"🌙 আজকের সেহরি: {sehri_time}")
 
 @bot.message_handler(commands=['iftar'])
 def iftar(message):
-    bot.reply_to(message, f"🌅 আজকের ইফতারের সময়: {iftar_time}")
+    bot.reply_to(message, f"🌅 আজকের ইফতার: {iftar_time}")
 
 @bot.message_handler(commands=['district'])
 def district(message):
@@ -55,5 +73,6 @@ def dua(message):
 """
     bot.reply_to(message, dua_text)
 
-print("Bot running successfully...")
-bot.infinity_polling()
+if __name__ == "__main__":
+    threading.Thread(target=bot_polling).start()
+    run()
