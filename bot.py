@@ -1,78 +1,59 @@
 import telebot
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
+import requests
+import datetime
 import os
-from flask import Flask
-import threading
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Ramadan Bot is Running!"
-
-def run():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-
-def bot_polling():
-    print("Bot running successfully...")
-    bot.infinity_polling()
-
-sehri_time = "4:45 AM"
-iftar_time = "6:10 PM"
-
+# ৬৪ জেলা
 districts = [
-"Dhaka","Chattogram","Rajshahi","Khulna","Barishal","Sylhet","Rangpur","Mymensingh",
-"Comilla","Feni","Brahmanbaria","Rangamati","Noakhali","Chandpur","Lakshmipur","Cox's Bazar",
-"Bandarban","Khagrachari","Sirajganj","Pabna","Bogura","Joypurhat","Naogaon","Natore",
-"Chapainawabganj","Jashore","Satkhira","Meherpur","Narail","Chuadanga","Kushtia","Magura",
-"Bagerhat","Jhenaidah","Pirojpur","Patuakhali","Bhola","Barguna","Jhalokathi","Habiganj",
-"Moulvibazar","Sunamganj","Dinajpur","Gaibandha","Kurigram","Lalmonirhat","Nilphamari",
-"Panchagarh","Thakurgaon","Sherpur","Jamalpur","Netrokona","Tangail","Kishoreganj",
-"Manikganj","Munshiganj","Narayanganj","Narsingdi","Faridpur","Gopalganj","Madaripur",
-"Rajbari","Shariatpur"
+"Dhaka","Tangail","Chattogram","Khulna","Rajshahi",
+"Barishal","Sylhet","Rangpur","Mymensingh"
 ]
 
+# Ramadan 2026 start date (Bangladesh approx)
+ramadan_start = datetime.date(2026, 2, 18)
+
+# START
 @bot.message_handler(commands=['start'])
 def start(message):
-    text = """🌙 Ramadan Mubarak!
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    for d in districts:
+        markup.add(KeyboardButton(d))
 
-Available Commands:
+    bot.send_message(
+        message.chat.id,
+        "🌙 RAMADAN SEHRI & IFTAR TIME BOT\n\n"
+        "👑 Developer: MIRAZ BHAI\n"
+        "🚀 TEAM BCS\n\n"
+        "আপনার জেলা নির্বাচন করুন:",
+        reply_markup=markup
+    )
 
-/sehri - আজকের সেহরি সময়
-/iftar - আজকের ইফতার সময়
-/district - বাংলাদেশের ৬৪ জেলা
-/dua - রমজানের দোয়া
-"""
-    bot.reply_to(message, text)
+# জেলা সিলেক্ট করলে
+@bot.message_handler(func=lambda message: message.text in districts)
+def send_time(message):
+    district = message.text
 
-@bot.message_handler(commands=['sehri'])
-def sehri(message):
-    bot.reply_to(message, f"🌙 আজকের সেহরি: {sehri_time}")
+    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+    roza_no = (tomorrow - ramadan_start).days + 1
 
-@bot.message_handler(commands=['iftar'])
-def iftar(message):
-    bot.reply_to(message, f"🌅 আজকের ইফতার: {iftar_time}")
+    url = f"http://api.aladhan.com/v1/timingsByCity?city={district}&country=Bangladesh&method=1"
+    response = requests.get(url).json()
 
-@bot.message_handler(commands=['district'])
-def district(message):
-    text = "🇧🇩 বাংলাদেশের ৬৪ জেলা:\n\n"
-    text += "\n".join(districts)
-    bot.reply_to(message, text)
+    fajr = response['data']['timings']['Fajr']
+    maghrib = response['data']['timings']['Maghrib']
 
-@bot.message_handler(commands=['dua'])
-def dua(message):
-    dua_text = """🤲 রমজানের দোয়া:
+    bot.send_message(
+        message.chat.id,
+        f"📅 আগামীকাল: {tomorrow.strftime('%d %B %Y')}\n"
+        f"🌙 রোজা নং: {roza_no}\n\n"
+        f"🌄 সেহেরি শেষ: {fajr}\n"
+        f"🌇 ইফতার: {maghrib}\n\n"
+        f"👑 Developer: MIRAZ BHAI\n"
+        f"🚀 TEAM BCS"
+    )
 
-اللهم إنك عفو تحب العفو فاعف عني
-
-উচ্চারণ:
-আল্লাহুম্মা ইন্নাকা আফুউন তুহিব্বুল আফওয়া ফা'ফু আন্নি
-"""
-    bot.reply_to(message, dua_text)
-
-if __name__ == "__main__":
-    threading.Thread(target=bot_polling).start()
-    run()
+bot.polling()
